@@ -4,9 +4,9 @@ import asyncio
 import platform
 import argparse
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QPushButton, QListWidget, QListWidgetItem, QLabel, 
+                            QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QLabel, 
                             QMessageBox, QTabWidget, QSplitter, QLineEdit, QDialog,
-                            QFormLayout, QSpinBox, QDialogButtonBox, QTextEdit)
+                            QFormLayout, QSpinBox, QDialogButtonBox, QTextEdit, QHeaderView)
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from bleak_worker import BleakWorker
 from device_tab import DeviceTab
@@ -51,6 +51,15 @@ class BLEScanner(QMainWindow):
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         
+        # Splitter for device list and device tabs
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter, 1)
+        
+        # Device list and advertisement data in a vertical splitter
+        device_widget = QWidget()
+        device_layout = QVBoxLayout(device_widget)
+        device_layout.setContentsMargins(0, 0, 0, 0)
+        
         # Scanning controls
         scan_layout = QHBoxLayout()
         self.scan_button = QPushButton("Start Scan")
@@ -61,7 +70,7 @@ class BLEScanner(QMainWindow):
         self.settings_button.clicked.connect(self.show_settings_dialog)
         scan_layout.addWidget(self.settings_button)
         
-        main_layout.addLayout(scan_layout)
+        device_layout.addLayout(scan_layout)
         
         # Filter controls
         filter_layout = QHBoxLayout()
@@ -82,16 +91,7 @@ class BLEScanner(QMainWindow):
         self.adv_filter.textChanged.connect(self.apply_filters)
         filter_layout.addWidget(self.adv_filter)
         
-        main_layout.addLayout(filter_layout)
-        
-        # Splitter for device list and device tabs
-        splitter = QSplitter(Qt.Horizontal)
-        main_layout.addWidget(splitter, 1)
-        
-        # Device list and advertisement data in a vertical splitter
-        device_widget = QWidget()
-        device_layout = QVBoxLayout(device_widget)
-        device_layout.setContentsMargins(0, 0, 0, 0)
+        device_layout.addLayout(filter_layout)
         
         # Create a vertical splitter for device list and advertisement data
         device_splitter = QSplitter(Qt.Vertical)
@@ -101,9 +101,18 @@ class BLEScanner(QMainWindow):
         device_list_layout = QVBoxLayout(device_list_widget)
         device_list_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.device_list = QListWidget()
-        self.device_list.setFont(QApplication.font("Monospace"))  # Use monospace font for better column alignment
-        device_list_layout.addWidget(QLabel("Discovered Devices (MAC - Name - RSSI - Adv Period):"))
+        device_list_layout.addWidget(QLabel("Discovered Devices:"))
+        
+        # Create table widget for devices
+        self.device_list = QTableWidget()
+        self.device_list.setColumnCount(4)
+        self.device_list.setHorizontalHeaderLabels(["MAC Address", "Name", "RSSI", "Adv Period"])
+        self.device_list.setSelectionBehavior(QTableWidget.SelectRows)
+        self.device_list.setSelectionMode(QTableWidget.SingleSelection)
+        self.device_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.device_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.device_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.device_list.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         device_list_layout.addWidget(self.device_list)
         
         device_splitter.addWidget(device_list_widget)
@@ -135,7 +144,7 @@ class BLEScanner(QMainWindow):
         device_layout.addLayout(connect_layout)
         
         # Device selection handler
-        self.device_list.itemClicked.connect(self.device_selected)
+        self.device_list.itemSelectionChanged.connect(self.device_selected)
         
         splitter.addWidget(device_widget)
         
@@ -241,10 +250,12 @@ class BLEScanner(QMainWindow):
     
     def update_device_in_list(self, address):
         """Update a specific device in the list with new advertisement period"""
-        for i in range(self.device_list.count()):
-            item = self.device_list.item(i)
-            device = item.data(Qt.UserRole)
-            if device and hasattr(device, 'address') and device.address == address:
+        # Find the row with this device
+        for row in range(self.device_list.rowCount()):
+            item = self.device_list.item(row, 0)
+            if item and item.data(Qt.UserRole) and hasattr(item.data(Qt.UserRole), 'address') and item.data(Qt.UserRole).address == address:
+                device = item.data(Qt.UserRole)
+                
                 # Get the device properties
                 name = device.name if hasattr(device, 'name') else "Unknown Device"
                 
@@ -252,16 +263,17 @@ class BLEScanner(QMainWindow):
                 device_rssi = None
                 if address in self.device_advertisements:
                     device_rssi = self.device_advertisements[address].rssi
-                rssi_display = device_rssi if device_rssi is not None else "N/A"
+                rssi_display = str(device_rssi) if device_rssi is not None else "N/A"
                 
                 # Get advertisement period
                 adv_period = "N/A"
                 if address in self.adv_periods:
                     adv_period = f"{self.adv_periods[address]:.0f} ms"
                 
-                # Update the display text
-                display_text = f"{address:<17} | {name:<20} | RSSI: {rssi_display:<6} | Period: {adv_period}"
-                item.setText(display_text)
+                # Update the cells
+                self.device_list.item(row, 1).setText(name)
+                self.device_list.item(row, 2).setText(rssi_display)
+                self.device_list.item(row, 3).setText(adv_period)
                 break
     
     def update_device_list(self, devices):
@@ -273,7 +285,9 @@ class BLEScanner(QMainWindow):
         if not hasattr(self, 'all_devices'):
             return
             
-        self.device_list.clear()
+        self.device_list.setRowCount(0)  # Clear the table
+        # Ensure column headers are set correctly
+        self.device_list.setHorizontalHeaderLabels(["MAC Address", "Name", "RSSI", "Adv Period"])
         mac_filter = self.mac_filter.text().lower()
         
         try:
@@ -283,6 +297,7 @@ class BLEScanner(QMainWindow):
             
         adv_filter = self.adv_filter.text().strip().lower().replace(" ", "")
         
+        row = 0
         for device in self.all_devices:
             # Get device properties
             name = device.name if hasattr(device, 'name') else "Unknown Device"
@@ -314,31 +329,56 @@ class BLEScanner(QMainWindow):
                 if adv_filter not in mfg_hex:
                     continue
             
-            # Device passed all filters, add to list
-            rssi_display = device_rssi if device_rssi is not None else "N/A"
+            # Device passed all filters, add to table
+            self.device_list.insertRow(row)
             
-            # Get advertisement period if available
+            # MAC Address
+            mac_item = QTableWidgetItem(address)
+            mac_item.setData(Qt.UserRole, device)
+            self.device_list.setItem(row, 0, mac_item)
+            
+            # Name
+            name_item = QTableWidgetItem(name)
+            self.device_list.setItem(row, 1, name_item)
+            
+            # RSSI
+            rssi_display = str(device_rssi) if device_rssi is not None else "N/A"
+            rssi_item = QTableWidgetItem(rssi_display)
+            self.device_list.setItem(row, 2, rssi_item)
+            
+            # Advertisement Period
             adv_period = "N/A"
             if address in self.adv_periods:
                 adv_period = f"{self.adv_periods[address]:.0f} ms"
+            period_item = QTableWidgetItem(adv_period)
+            self.device_list.setItem(row, 3, period_item)
             
-            # Format the display with columns
-            display_text = f"{address:<17} | {name:<20} | RSSI: {rssi_display:<6} | Period: {adv_period}"
-            
-            # Add advertisement data as tooltip
+            # Add tooltip to all cells in the row
             tooltip = ""
             if address in self.device_advertisements and hasattr(self.device_advertisements[address], 'manufacturer_data'):
                 for company_code, data in self.device_advertisements[address].manufacturer_data.items():
                     if isinstance(data, (bytes, bytearray)):
                         tooltip += f"Mfg: 0x{company_code:04x} Data: {' '.join([f'{b:02X}' for b in data])}\n"
             
-            item = QListWidgetItem(display_text)
-            item.setData(Qt.UserRole, device)
             if tooltip:
-                item.setToolTip(tooltip)
-            self.device_list.addItem(item)
+                for col in range(4):
+                    self.device_list.item(row, col).setToolTip(tooltip)
+            
+            row += 1
     
-    def device_selected(self, item):
+    def device_selected(self):
+        selected_rows = self.device_list.selectedItems()
+        if not selected_rows:
+            return
+            
+        # Get the first selected row
+        row = selected_rows[0].row()
+        
+        # Get the device from the first cell of the selected row
+        item = self.device_list.item(row, 0)
+        if not item:
+            return
+            
         self.current_device = item.data(Qt.UserRole)
         self.connect_button.setEnabled(True)
         
