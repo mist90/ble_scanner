@@ -76,6 +76,11 @@ class BLEScanner(QMainWindow):
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Filter:"))
         
+        self.name_filter = QLineEdit()
+        self.name_filter.setPlaceholderText("Device Name")
+        self.name_filter.textChanged.connect(self.apply_filters)
+        filter_layout.addWidget(self.name_filter)
+        
         self.mac_filter = QLineEdit()
         self.mac_filter.setPlaceholderText("MAC Address")
         self.mac_filter.textChanged.connect(self.apply_filters)
@@ -288,6 +293,7 @@ class BLEScanner(QMainWindow):
         self.device_list.setRowCount(0)  # Clear the table
         # Ensure column headers are set correctly
         self.device_list.setHorizontalHeaderLabels(["MAC Address", "Name", "RSSI", "Adv Period"])
+        name_filter = self.name_filter.text().lower()
         mac_filter = self.mac_filter.text().lower()
         
         try:
@@ -307,6 +313,12 @@ class BLEScanner(QMainWindow):
             device_rssi = None
             if address in self.device_advertisements:
                 device_rssi = self.device_advertisements[address].rssi
+            
+            # Apply name filter
+            if name_filter:
+                device_name_lower = (name or "").lower()
+                if name_filter not in device_name_lower:
+                    continue
             
             # Apply MAC filter
             if mac_filter and mac_filter not in address.lower():
