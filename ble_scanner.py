@@ -184,13 +184,14 @@ class BLEScanner(QMainWindow):
     def start_scan(self):
         self.scanning = True
         self.scan_button.setText("Stop Scan")
-        self.device_list.clear()
-        # Clear advertisement timestamps and periods for a fresh scan
+        self.device_list.setRowCount(0)
+        self.all_devices = []
+        self.device_advertisements = {}
         self.adv_timestamps = {}
         self.adv_periods = {}
         self.statusBar().showMessage("Scanning for devices...")
         self.ble_worker.scan_devices(self.scan_time)
-        self.scan_timer.start(self.scan_time)  # Auto-stop after configured time
+        self.scan_timer.start(self.scan_time)
     
     def stop_scan(self):
         self.scanning = False
@@ -757,8 +758,8 @@ class BLEScanner(QMainWindow):
         
         # Scan time setting
         scan_time_spin = QSpinBox(dialog)
-        scan_time_spin.setRange(1, 60)
-        scan_time_spin.setValue(self.scan_time // 1000)  # Convert ms to seconds
+        scan_time_spin.setRange(1, 1800)
+        scan_time_spin.setValue(self.scan_time // 1000)
         scan_time_spin.setSuffix(" seconds")
         layout.addRow("Scan Time:", scan_time_spin)
         
