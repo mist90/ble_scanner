@@ -3,6 +3,16 @@ Crossplatform BLE scanner
 
 ![image](https://github.com/user-attachments/assets/08956ac8-70d3-4548-aefd-9548472ed938)
 
+## Features
+
+- **Device Discovery** — scan for nearby BLE devices with configurable scan duration (up to 30 minutes)
+- **Real-time Filtering** — filter devices by name, MAC address, RSSI level, or advertisement data (hex)
+- **Advertisement Data** — view raw advertisement data including manufacturer data, service UUIDs, TX power, and advertisement period
+- **Device Connection** — connect to multiple BLE devices simultaneously in separate tabs
+- **Service Browser** — explore GATT services and characteristics with properties display
+- **Read/Write** — read and write characteristic values (hex format)
+- **Notifications** — subscribe to characteristic notifications with timestamped logging
+- **Cross-platform** — works on Windows, macOS, and Linux
 
 ## Requirements
 python3
