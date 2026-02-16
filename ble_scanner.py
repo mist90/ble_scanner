@@ -6,7 +6,8 @@ import argparse
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QLabel, 
                             QMessageBox, QTabWidget, QSplitter, QLineEdit, QDialog,
-                            QFormLayout, QSpinBox, QDialogButtonBox, QTextEdit, QHeaderView)
+                            QFormLayout, QSpinBox, QDialogButtonBox, QTextEdit, QHeaderView,
+                            QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from bleak_worker import BleakWorker
 from device_tab import DeviceTab
@@ -60,18 +61,6 @@ class BLEScanner(QMainWindow):
         device_layout = QVBoxLayout(device_widget)
         device_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Scanning controls
-        scan_layout = QHBoxLayout()
-        self.scan_button = QPushButton("Start Scan")
-        self.scan_button.clicked.connect(self.toggle_scan)
-        scan_layout.addWidget(self.scan_button)
-        
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.show_settings_dialog)
-        scan_layout.addWidget(self.settings_button)
-        
-        device_layout.addLayout(scan_layout)
-        
         # Filter controls
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Filter:"))
@@ -97,6 +86,20 @@ class BLEScanner(QMainWindow):
         filter_layout.addWidget(self.adv_filter)
         
         device_layout.addLayout(filter_layout)
+        
+        # Scanning controls
+        scan_layout = QHBoxLayout()
+        self.scan_button = QPushButton("Start Scan")
+        self.scan_button.clicked.connect(self.toggle_scan)
+        scan_layout.addWidget(self.scan_button)
+        
+        self.settings_button = QPushButton("Settings")
+        self.settings_button.clicked.connect(self.show_settings_dialog)
+        scan_layout.addWidget(self.settings_button)
+        
+        scan_layout.addStretch(1)
+        
+        device_layout.addLayout(scan_layout)
         
         # Create a vertical splitter for device list and advertisement data
         device_splitter = QSplitter(Qt.Vertical)
@@ -290,9 +293,12 @@ class BLEScanner(QMainWindow):
     def apply_filters(self):
         if not hasattr(self, 'all_devices'):
             return
+        
+        selected_address = None
+        if self.current_device and hasattr(self.current_device, 'address'):
+            selected_address = self.current_device.address
             
-        self.device_list.setRowCount(0)  # Clear the table
-        # Ensure column headers are set correctly
+        self.device_list.setRowCount(0)
         self.device_list.setHorizontalHeaderLabels(["MAC Address", "Name", "RSSI", "Adv Period"])
         name_filter = self.name_filter.text().lower()
         mac_filter = self.mac_filter.text().lower()
@@ -378,6 +384,15 @@ class BLEScanner(QMainWindow):
                     self.device_list.item(row, col).setToolTip(tooltip)
             
             row += 1
+        
+        if selected_address:
+            for row_idx in range(self.device_list.rowCount()):
+                item = self.device_list.item(row_idx, 0)
+                if item:
+                    dev = item.data(Qt.UserRole)
+                    if dev and hasattr(dev, 'address') and dev.address == selected_address:
+                        self.device_list.selectRow(row_idx)
+                        break
     
     def device_selected(self):
         selected_rows = self.device_list.selectedItems()
