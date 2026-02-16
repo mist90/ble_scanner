@@ -11,7 +11,6 @@ pip install bleak PyQt5
 # Run
 ./ble_scanner.py
 
-This is AI-generated software.
 #    MIT License
   Author: Mikhail Tegin, 2025
   ropewalker@yandex-team.ru
