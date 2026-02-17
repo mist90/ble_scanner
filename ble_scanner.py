@@ -3,12 +3,13 @@ import sys
 import asyncio
 import platform
 import argparse
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QLabel, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                            QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QLabel,
                             QMessageBox, QTabWidget, QSplitter, QLineEdit, QDialog,
                             QFormLayout, QSpinBox, QDialogButtonBox, QTextEdit, QHeaderView,
                             QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QDateTime
+from PyQt5.QtGui import QFont
 from bleak_worker import BleakWorker
 from device_tab import DeviceTab
 
@@ -117,10 +118,16 @@ class BLEScanner(QMainWindow):
         self.device_list.setHorizontalHeaderLabels(["MAC Address", "Name", "RSSI", "Adv Period"])
         self.device_list.setSelectionBehavior(QTableWidget.SelectRows)
         self.device_list.setSelectionMode(QTableWidget.SingleSelection)
-        self.device_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.device_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.device_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.device_list.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.device_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.device_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.Interactive)
+        self.device_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.Interactive)
+        self.device_list.horizontalHeader().setSectionResizeMode(3, QHeaderView.Interactive)
+        self.device_list.setColumnWidth(0, 260)
+        self.device_list.setColumnWidth(1, 500)
+        self.device_list.setColumnWidth(2, 80)
+        self.device_list.setColumnWidth(3, 200)
+        self.name_font = QFont()
+        self.name_font.setBold(True)
         device_list_layout.addWidget(self.device_list)
         
         device_splitter.addWidget(device_list_widget)
@@ -280,7 +287,9 @@ class BLEScanner(QMainWindow):
                     adv_period = f"{self.adv_periods[address]:.0f} ms"
                 
                 # Update the cells
-                self.device_list.item(row, 1).setText(name)
+                name_cell = self.device_list.item(row, 1)
+                name_cell.setText(name)
+                name_cell.setFont(self.name_font)
                 self.device_list.item(row, 2).setText(rssi_display)
                 self.device_list.item(row, 3).setText(adv_period)
                 break
@@ -358,6 +367,7 @@ class BLEScanner(QMainWindow):
             
             # Name
             name_item = QTableWidgetItem(name)
+            name_item.setFont(self.name_font)
             self.device_list.setItem(row, 1, name_item)
             
             # RSSI
