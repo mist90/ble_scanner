@@ -1,7 +1,7 @@
 # ble_scanner
 Crossplatform BLE scanner
 
-![image](https://github.com/user-attachments/assets/08956ac8-70d3-4548-aefd-9548472ed938)
+<img width="1916" height="1002" alt="image" src="https://github.com/user-attachments/assets/2ca039b2-1f7a-4aa2-a90a-eb44a613228e" />
 
 ## Features
 
